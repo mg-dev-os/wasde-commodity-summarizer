@@ -17,7 +17,18 @@ def main():
     max_mb = ui.get("max_file_size_mb", 50)
     max_bytes = max_mb * 1024 * 1024
 
-    st.set_page_config(page_title=title, layout="wide")
+    st.set_page_config(page_title=title, layout="wide", menu_items={})
+    # Hide Streamlit header toolbar (Deploy + three-dot menu)
+    st.markdown(
+        """
+        <style>
+            #MainMenu {visibility: hidden;}
+            header [data-testid="stToolbar"] {visibility: hidden;}
+            footer {visibility: hidden;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     st.title(title)
     st.caption("Upload a USDA WASDE PDF to get AI summaries by commodity (Wheat, Coarse Grains, Rice, etc.).")
 

@@ -64,12 +64,22 @@ def summarize_commentary(commodity_name: str, commentary: str) -> str:
     if provider == "gemini" and not get_gemini_api_key():
         return "Error: GEMINI_API_KEY is not set. Get a free key at https://aistudio.google.com/app/apikey and add to .env"
 
+    # Treat very short or empty commentary like "no section" (same as Poultry when no text extracted)
+    commentary_stripped = (commentary or "").strip()
+    if len(commentary_stripped) < 50:
+        return "(No commentary extracted for this section.)"
+
+    # Truncate to avoid 413 / token limit (e.g. Groq 6k TPM; keep request under limit)
+    max_chars = openai_cfg.get("max_commentary_chars", 12000)
+    if len(commentary_stripped) > max_chars:
+        commentary_stripped = commentary_stripped[:max_chars] + "\n\n[... truncated for length ...]"
+
     system = (
         "You are an analyst summarizing USDA WASDE report commentary. "
         "Output a concise, clear summary (2–5 sentences) of the key points: "
         "supply, demand, trade, stocks, and price outlook. Use plain language."
     )
-    user = f"Summarize the following commentary for **{commodity_name}**:\n\n{commentary}"
+    user = f"Summarize the following commentary for **{commodity_name}**:\n\n{commentary_stripped}"
 
     max_tokens = openai_cfg.get("max_tokens", 2048)
     temperature = openai_cfg.get("temperature", 0.3)
@@ -106,6 +116,10 @@ def summarize_commentary(commodity_name: str, commentary: str) -> str:
         choice = response.choices[0]
         return (choice.message.content or "").strip()
     except Exception as e:
+        err_str = str(e).lower()
+        # Request too large (e.g. Groq 413) -> same style as Poultry: short plain message
+        if "413" in str(e) or "request too large" in err_str or "token" in err_str and "limit" in err_str:
+            return "(No commentary could be summarized for this section due to length limits. Please refer to the PDF for key points on supply, demand, and prices.)"
         labels = {"groq": "Groq", "openai": "OpenAI"}
         provider_label = labels.get(provider, provider)
         return f"Error from {provider_label}: {e!s}"

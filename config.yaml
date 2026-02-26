@@ -20,6 +20,8 @@ openai:
   model: "gpt-4o-mini"
   max_tokens: 2048
   temperature: 0.3
+  # Max characters of commentary sent to LLM (avoids 413 on Groq etc.). Truncate if longer.
+  max_commentary_chars: 12000
 
 # PDF parsing: section headers used to split commentary by commodity
 pdf:

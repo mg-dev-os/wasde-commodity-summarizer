@@ -36,6 +36,7 @@ def _default_config():
             "model": "gpt-4o-mini",
             "max_tokens": 2048,
             "temperature": 0.3,
+            "max_commentary_chars": 12000,
         },
         "pdf": {
             "commodity_headers": [

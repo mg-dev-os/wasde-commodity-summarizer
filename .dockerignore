@@ -1,0 +1,31 @@
+# Git and env
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.venv
+venv
+env
+
+# Test and IDE
+.pytest_cache
+.coverage
+htmlcov
+.idea
+.vscode
+
+# Docs (optional: remove if you want them in the image)
+*.md
+!README.md
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore

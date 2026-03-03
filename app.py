@@ -6,8 +6,8 @@ from pathlib import Path
 import streamlit as st
 
 from src.config_loader import get_config, get_gemini_api_key, get_groq_api_key, get_openai_api_key
-from src.pdf_extractor import extract_text_by_commodity
-from src.summarizer import summarize_all_commodities
+from src.pdf_extractor import extract_text_by_commodity, extract_raw_text
+from src.summarizer import summarize_all_commodities, answer_query
 
 
 def main():
@@ -30,7 +30,7 @@ def main():
         unsafe_allow_html=True,
     )
     st.title(title)
-    st.caption("Upload a USDA WASDE PDF to get AI summaries by commodity (Wheat, Coarse Grains, Rice, etc.).")
+    st.caption("Upload a USDA WASDE PDF to get AI summaries by commodity (Wheat, Coarse Grains, Rice, etc.) and search the document with natural language questions.")
 
     config = get_config()
     provider = (config.get("llm") or {}).get("provider", "openai")
@@ -62,23 +62,70 @@ def main():
         tmp_path = Path(tmp.name)
 
     try:
-        with st.spinner("Extracting text from PDF..."):
-            sections = extract_text_by_commodity(tmp_path)
+        # Cache extracted text per file so we don't re-extract on every Search/Summarize click
+        cache_key = (uploaded.name, uploaded.size)
+        if (
+            st.session_state.get("pdf_cache_key") == cache_key
+            and st.session_state.get("cached_sections") is not None
+            and st.session_state.get("cached_full_text") is not None
+        ):
+            sections = st.session_state["cached_sections"]
+            full_text = st.session_state["cached_full_text"]
+        else:
+            with st.spinner("Extracting text from PDF..."):
+                sections = extract_text_by_commodity(tmp_path)
+                full_text = extract_raw_text(tmp_path)
+            st.session_state["pdf_cache_key"] = cache_key
+            st.session_state["cached_sections"] = sections
+            st.session_state["cached_full_text"] = full_text
+
         if not sections:
             st.warning("No commodity sections were found in this PDF. The file may be scanned or use a different structure.")
             return
 
         st.success(f"Found {len(sections)} section(s): {', '.join(sections.keys())}")
 
-        if st.button("Generate summaries", type="primary"):
-            with st.spinner("Summarizing..."):
-                summaries = summarize_all_commodities(sections)
+        # When user uploads a different file, clear cache and previous summaries/search result
+        if "uploaded_file_name" not in st.session_state:
+            st.session_state["uploaded_file_name"] = None
+        if st.session_state["uploaded_file_name"] != uploaded.name:
+            st.session_state["uploaded_file_name"] = uploaded.name
+            st.session_state["summaries"] = None
+            st.session_state["search_answer"] = None
+        if "summaries" not in st.session_state:
+            st.session_state["summaries"] = None
+        if "search_answer" not in st.session_state:
+            st.session_state["search_answer"] = None
 
-            st.divider()
+        # Two columns so Summaries and Search are visible at the same time
+        col_summaries, col_search = st.columns([1, 1])
+
+        with col_summaries:
             st.subheader("Summaries by commodity")
-            for commodity, summary in summaries.items():
-                with st.expander(commodity, expanded=True):
-                    st.markdown(summary)
+            if st.button("Generate summaries", type="primary", key="btn_summaries"):
+                with st.spinner("Summarizing..."):
+                    st.session_state["summaries"] = summarize_all_commodities(sections)
+            if st.session_state["summaries"]:
+                for commodity, summary in st.session_state["summaries"].items():
+                    with st.expander(commodity, expanded=True):
+                        st.markdown(summary)
+            else:
+                st.info("Click **Generate summaries** to see summaries for each commodity.")
+
+        with col_search:
+            st.subheader("Search the document")
+            st.caption("Ask a natural language question about the uploaded PDF.")
+            search_query = st.text_input("Your question", key="search_query", placeholder="e.g. What are the wheat export projections?")
+            if st.button("Search", key="btn_search"):
+                if search_query and search_query.strip():
+                    with st.spinner("Searching..."):
+                        st.session_state["search_answer"] = answer_query(search_query, full_text)
+                else:
+                    st.session_state["search_answer"] = None
+                    st.info("Enter a question and click Search.")
+            if st.session_state.get("search_answer") is not None:
+                st.markdown("**Answer:**")
+                st.markdown(st.session_state["search_answer"])
     finally:
         tmp_path.unlink(missing_ok=True)
 

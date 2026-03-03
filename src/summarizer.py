@@ -137,3 +137,71 @@ def summarize_all_commodities(sections: dict[str, str]) -> dict[str, str]:
             continue
         result[name] = summarize_commentary(name, text)
     return result
+
+
+def answer_query(query: str, document_text: str) -> str:
+    """
+    Answer a natural language question using the document text and the configured LLM.
+    Returns the answer string or an error message.
+    """
+    config = get_config()
+    provider = (config.get("llm") or {}).get("provider", "openai")
+    openai_cfg = config.get("openai", {})
+    groq_cfg = (config.get("llm") or {}).get("groq") or {}
+    gemini_cfg = (config.get("llm") or {}).get("gemini") or {}
+
+    if not (query and query.strip()):
+        return "Please enter a question."
+    if not (document_text and document_text.strip()):
+        return "No document text available to search."
+
+    # Truncate document to stay under token limits (same as commentary)
+    max_chars = openai_cfg.get("max_commentary_chars", 12000)
+    doc_excerpt = (document_text or "").strip()
+    if len(doc_excerpt) > max_chars:
+        doc_excerpt = doc_excerpt[:max_chars] + "\n\n[... document truncated for length ...]"
+
+    system = (
+        "You are a helpful assistant. Answer the user's question based ONLY on the following document excerpt from a USDA WASDE report. "
+        "Use plain language. If the answer is not in the text, say so. Keep answers concise (a few sentences)."
+    )
+    user = f"Document excerpt:\n\n{doc_excerpt}\n\n---\n\nUser question: {query.strip()}"
+
+    max_tokens = openai_cfg.get("max_tokens", 2048)
+    temperature = openai_cfg.get("temperature", 0.3)
+
+    if provider == "gemini":
+        try:
+            model_name = gemini_cfg.get("model", "gemini-1.5-flash")
+            return _call_gemini(system, user, model_name, max_tokens, temperature)
+        except Exception as e:
+            return f"Error from Gemini: {e!s}"
+
+    client = _get_openai_compatible_client()
+    if client is None:
+        return "Error: Could not create LLM client. Set the API key for the chosen provider (see config.yaml)."
+
+    if provider == "groq":
+        model = groq_cfg.get("model", "llama-3.1-8b-instant")
+    else:
+        model = openai_cfg.get("model", "gpt-4o-mini")
+
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        choice = response.choices[0]
+        return (choice.message.content or "").strip()
+    except Exception as e:
+        err_str = str(e).lower()
+        if "413" in str(e) or "request too large" in err_str or "token" in err_str and "limit" in err_str:
+            return "The document is too long to search in one request. Try a more specific question or refer to the PDF."
+        labels = {"groq": "Groq", "openai": "OpenAI"}
+        provider_label = labels.get(provider, provider)
+        return f"Error from {provider_label}: {e!s}"

@@ -118,7 +118,7 @@ def test_summarize_commentary_mock_openai(monkeypatch):
     monkeypatch.setattr("src.summarizer.get_config", lambda: {**base_cfg, "llm": {"provider": "openai"}})
     with mock.patch("src.summarizer.OpenAI") as mock_client:
         mock_client.return_value.chat.completions.create = fake_create
-        out = summarize_commentary("Wheat", "Production up. Exports higher.")
+        out = summarize_commentary("Wheat", "Production up. Exports higher. Stocks revised down. Price outlook unchanged for the season.")
     assert mock_summary in out or "Mock summary" in out
 
 

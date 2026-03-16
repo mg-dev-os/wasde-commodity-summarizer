@@ -32,5 +32,8 @@ dist/
 .DS_Store
 Thumbs.db
 
+# LanceDB vector store (local)
+.lancedb/
+
 # Uploaded PDFs (optional: keep if you want to persist)
 # uploads/

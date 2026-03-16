@@ -35,3 +35,24 @@ pdf:
     - Livestock
     - Poultry
     - Dairy
+
+# Retrieval Pipeline Settings
+retrieval:
+  chunking:
+    strategy: "commodity_aware"  # options: "commodity_aware", "standard"
+    chunk_size: 600
+    overlap: 100
+  embedding:
+    provider: "sentence-transformers" # options: "sentence-transformers", "openai"
+    openai_model: "text-embedding-3-small"
+  vector_store:
+    provider: "lancedb" # options: "lancedb"
+    path: ".lancedb"
+    top_k: 5
+
+# Optional: Microsoft Agent Framework (MAF)
+use_maf_retrieval: false
+
+# Use Microsoft Agent Framework (MAF) for search: agent performs retrieval via LanceDB tool.
+# Requires OPENAI_API_KEY (MAF uses OpenAI for the agent). If false, search uses direct LLM (Groq/Gemini/OpenAI).
+use_maf_retrieval: false

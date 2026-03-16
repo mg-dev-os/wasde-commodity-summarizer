@@ -52,6 +52,12 @@ def _default_config():
             ],
         },
         "ui": {"page_title": "WASDE Commodity Summarizer", "max_file_size_mb": 50},
+        "retrieval": {
+            "chunking": {"strategy": "commodity_aware", "chunk_size": 600, "overlap": 100},
+            "embedding": {"provider": "sentence-transformers", "openai_model": "text-embedding-3-small"},
+            "vector_store": {"provider": "lancedb", "path": ".lancedb", "top_k": 5},
+        },
+        "use_maf_retrieval": False,
     }
 
 

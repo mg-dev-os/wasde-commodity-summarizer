@@ -80,11 +80,13 @@ The Dockerfile uses `python:3.11-slim`, installs dependencies from `requirements
 - **Upload**: Choose a WASDE PDF (e.g. from [USDA WASDE](https://www.usda.gov/oce/commodity/wasde)).
 - **Extract**: The app extracts text and splits it by commodity section headers.
 - **Summarize**: Click "Generate summaries" to send each section to the configured LLM and show results in the UI.
+- **Search**: Ask natural language questions; the LLM answers from the document (or from LanceDB when MAF is enabled).
+- **LanceDB + MAF (optional):** Set `use_maf_retrieval: true` in `config.yaml`. The document is stored in **LanceDB** (vector DB); **Microsoft Agent Framework (MAF)** performs retrieval via a tool that queries LanceDB, then the agent answers. Requires `OPENAI_API_KEY`. Indexing runs on first search.
 
 ## Configuration
 
-- **config.yaml**: `llm.provider` (`groq`, `gemini`, or `openai`), model names, token limits, commodity headers, UI settings.
-- **Environment**: `GROQ_API_KEY`, `GEMINI_API_KEY`, or `OPENAI_API_KEY` depending on provider.
+- **config.yaml**: `llm.provider` (`groq`, `gemini`, or `openai`), model names, token limits, commodity headers, UI settings; `vector_store` (path, chunk_size, overlap, top_k) for LanceDB; `use_maf_retrieval` (true/false) to enable MAF + LanceDB for search.
+- **Environment**: `GROQ_API_KEY`, `GEMINI_API_KEY`, or `OPENAI_API_KEY` depending on provider. For MAF retrieval, `OPENAI_API_KEY` is required.
 
 ## Tests
 
@@ -97,11 +99,21 @@ Tests use mocks for the OpenAI API (no real key required for tests).
 ## Project layout
 
 - `app.py` – Streamlit UI
-- `src/` – Config loader, PDF extractor, summarizer
-- `config.yaml` – Settings (including `llm.provider`)
+- `src/` – Config loader, PDF extractor, summarizer, vector store (LanceDB), retrieval agent (MAF)
+- `config.yaml` – Settings (including `llm.provider`, `vector_store`, `use_maf_retrieval`)
 - `Dockerfile` – Image for running the app in Docker
 - `docker-compose.yml` – Compose file (uses `.env` for API keys)
 - `JUSTIFICATION.md` – Why OpenAI direct API vs LangChain/LiteLLM
+- `scripts/inspect_vector_db.py` – Script to list tables and sample rows in the local LanceDB
+
+### Inspecting the local vector DB
+
+- **Location:** The LanceDB data is stored on disk at the path in `config.yaml` under `vector_store.path` (default: `.lancedb` in the project root). It appears after you run Search at least once with `use_maf_retrieval: true`.
+- **Inspect via script:** From the project root run:
+  ```bash
+  python scripts/inspect_vector_db.py
+  ```
+  This prints the DB path, table names, row counts, and the first 3 text chunks per table.
 
 ## Deliverables
 

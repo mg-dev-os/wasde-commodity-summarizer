@@ -8,6 +8,8 @@ import streamlit as st
 from src.config_loader import get_config, get_gemini_api_key, get_groq_api_key, get_openai_api_key
 from src.pdf_extractor import extract_text_by_commodity, extract_raw_text
 from src.summarizer import summarize_all_commodities, answer_query
+from src.vector_store import index_document
+from src.retrieval_agent import answer_with_maf
 
 
 def main():
@@ -92,10 +94,15 @@ def main():
             st.session_state["uploaded_file_name"] = uploaded.name
             st.session_state["summaries"] = None
             st.session_state["search_answer"] = None
+            st.session_state["vector_indexed_for"] = None
         if "summaries" not in st.session_state:
             st.session_state["summaries"] = None
         if "search_answer" not in st.session_state:
             st.session_state["search_answer"] = None
+        if "vector_indexed_for" not in st.session_state:
+            st.session_state["vector_indexed_for"] = None
+
+        use_maf = config.get("use_maf_retrieval", False)
 
         # Two columns so Summaries and Search are visible at the same time
         col_summaries, col_search = st.columns([1, 1])
@@ -115,11 +122,32 @@ def main():
         with col_search:
             st.subheader("Search the document")
             st.caption("Ask a natural language question about the uploaded PDF.")
+            if use_maf:
+                st.caption("**LanceDB + MAF:** Search uses vector store (LanceDB) and Microsoft Agent Framework for retrieval.")
+                
+                # Add filter dropdown for Commodity
+                options = ["All"] + list(st.session_state.get("cached_sections", {}).keys())
+                filter_commodity = st.selectbox("Filter by Commodity (Optional)", options=options)
+            else:
+                filter_commodity = "All"
+                
             search_query = st.text_input("Your question", key="search_query", placeholder="e.g. What are the wheat export projections?")
             if st.button("Search", key="btn_search"):
                 if search_query and search_query.strip():
                     with st.spinner("Searching..."):
-                        st.session_state["search_answer"] = answer_query(search_query, full_text)
+                        if use_maf:
+                            if st.session_state.get("vector_indexed_for") != uploaded.name:
+                                with st.spinner("Indexing document into LanceDB..."):
+                                    index_document(uploaded.name, sections)
+                                st.session_state["vector_indexed_for"] = uploaded.name
+                            
+                            filters = {}
+                            if filter_commodity != "All":
+                                filters["commodity"] = filter_commodity
+                                
+                            st.session_state["search_answer"] = answer_with_maf(search_query, uploaded.name, filters=filters)
+                        else:
+                            st.session_state["search_answer"] = answer_query(search_query, full_text)
                 else:
                     st.session_state["search_answer"] = None
                     st.info("Enter a question and click Search.")

@@ -1,0 +1,109 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.1, pytest-7.4.4, pluggy-1.6.0
+rootdir: C:\Users\222\Downloads\assignment (2)\assignment
+plugins: anyio-3.7.1, asyncio-0.23.6
+asyncio: mode=Mode.STRICT
+collected 4 items
+
+tests\test_retrieval_pipeline.py ..FF                                    [100%]
+
+================================== FAILURES ===================================
+_____________________ test_sentence_transformer_embedder ______________________
+
+args = (), keywargs = {}
+
+    @wraps(func)
+    def patched(*args, **keywargs):
+>       with self.decoration_helper(patched,
+                                    args,
+                                    keywargs) as (newargs, newkeywargs):
+
+C:\Python313\Lib\unittest\mock.py:1421: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python313\Lib\contextlib.py:141: in __enter__
+    return next(self.gen)
+C:\Python313\Lib\unittest\mock.py:1403: in decoration_helper
+    arg = exit_stack.enter_context(patching)
+C:\Python313\Lib\contextlib.py:530: in enter_context
+    result = _enter(cm)
+C:\Python313\Lib\unittest\mock.py:1495: in __enter__
+    original, local = self.get_original()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <unittest.mock._patch object at 0x000002758C90E7B0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'src.embeddings' from 'C:\\Users\\222\\Downloads\\assignment (2)\\assignment\\src\\embeddings.py'> does not have the attribute 'SentenceTransformer'
+
+C:\Python313\Lib\unittest\mock.py:1465: AttributeError
+________________ test_lancedb_vector_store_schema_and_filters _________________
+
+args = (), keywargs = {}
+
+    @wraps(func)
+    def patched(*args, **keywargs):
+>       with self.decoration_helper(patched,
+                                    args,
+                                    keywargs) as (newargs, newkeywargs):
+
+C:\Python313\Lib\unittest\mock.py:1421: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python313\Lib\contextlib.py:141: in __enter__
+    return next(self.gen)
+C:\Python313\Lib\unittest\mock.py:1403: in decoration_helper
+    arg = exit_stack.enter_context(patching)
+C:\Python313\Lib\contextlib.py:530: in enter_context
+    result = _enter(cm)
+C:\Python313\Lib\unittest\mock.py:1479: in __enter__
+    self.target = self.getter()
+C:\Python313\Lib\pkgutil.py:513: in resolve_name
+    mod = importlib.import_module(modname)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'lancedb', package = None
+
+    def import_module(name, package=None):
+        """Import a module.
+    
+        The 'package' argument is required when performing a relative import. It
+        specifies the package to use as the anchor point from which to resolve the
+        relative import to an absolute import.
+    
+        """
+        level = 0
+        if name.startswith('.'):
+            if not package:
+                raise TypeError("the 'package' argument is required to perform a "
+                                f"relative import for {name!r}")
+            for character in name:
+                if character != '.':
+                    break
+                level += 1
+>       return _bootstrap._gcd_import(name[level:], package, level)
+E       ModuleNotFoundError: No module named 'lancedb'
+
+C:\Python313\Lib\importlib\__init__.py:88: ModuleNotFoundError
+=========================== short test summary info ===========================
+FAILED tests/test_retrieval_pipeline.py::test_sentence_transformer_embedder
+FAILED tests/test_retrieval_pipeline.py::test_lancedb_vector_store_schema_and_filters
+========================= 2 failed, 2 passed in 0.47s =========================
